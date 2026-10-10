@@ -15,8 +15,8 @@ type UploadedDoc = {
 const VALID_TYPES = new Set(['penuntun', 'sumber', 'lembar'])
 const MAX_BODY_CHARS = 1_500_000
 const MAX_FILES = 8
-const MAX_DOCUMENT_CHARS = 8_000
-const MAX_TOTAL_TEXT_CHARS = 64_000
+const MAX_DOCUMENT_CHARS = 16_000
+const MAX_TOTAL_TEXT_CHARS = 128_000
 
 let ppkiGuidelines = ''
 try {
