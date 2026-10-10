@@ -1,0 +1,11 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+.env
+.DS_Store
+*.log
+uiux-books/
+scripts/
+.zscripts/
