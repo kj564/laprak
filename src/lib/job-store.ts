@@ -8,6 +8,7 @@ import {
   readdirSync,
   mkdirSync,
   renameSync,
+  statSync,
 } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
@@ -86,8 +87,8 @@ export function cleanupOldJobs() {
       try {
         if (file.endsWith('.tmp')) {
           // Remove abandoned atomic-write temp files older than the same retention window.
-          const stat = readFileSync(filepath)
-          if (stat.length === 0) unlinkSync(filepath)
+          const stat = statSync(filepath)
+          if (now - stat.mtimeMs > maxAge) unlinkSync(filepath)
           continue
         }
         if (!file.endsWith('.json')) continue
