@@ -65,7 +65,18 @@ export default function Home() {
       })
 
       if (!startResponse.ok) {
-        throw new Error(`Gagal memulai generate (${startResponse.status})`)
+        let serverMessage = ''
+        try {
+          const errorData = await startResponse.json()
+          if (typeof errorData?.error === 'string') serverMessage = errorData.error
+        } catch {
+          // Response may not be JSON (for example, a proxy error page).
+        }
+        throw new Error(
+          serverMessage
+            ? `Gagal memulai generate (${startResponse.status}): ${serverMessage}`
+            : `Gagal memulai generate (${startResponse.status}). Periksa log server untuk detail.`
+        )
       }
 
       const startData = await startResponse.json()
