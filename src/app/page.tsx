@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UploadPanel } from '@/components/practicum/upload-panel'
 import { ReportPreview } from '@/components/practicum/report-preview'
@@ -33,10 +33,6 @@ export default function Home() {
   const [report, setReport] = useState<GeneratedReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
-
-  const handleFilesUpdate = useCallback((updatedFiles: UploadedFile[]) => {
-    setFiles(updatedFiles)
-  }, [])
 
   const handleGenerate = useCallback(async () => {
     const extractedFiles = files.filter(f => f.status === 'extracted' && f.text)
@@ -193,7 +189,7 @@ export default function Home() {
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">1</span>
             <h2 className="text-base font-semibold text-slate-900">Upload Dokumen</h2>
           </div>
-          <UploadPanel files={files} onFilesUpdate={handleFilesUpdate} />
+          <UploadPanel files={files} onFilesUpdate={setFiles} />
         </section>
 
         {/* Step 2: Generate */}
