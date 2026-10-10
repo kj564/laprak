@@ -10,7 +10,7 @@ export const runtime = 'nodejs'
 
 const execFileAsync = promisify(execFile)
 const MAX_FILE_SIZE = 15 * 1024 * 1024
-const MAX_TEXT_CHARS = 8_000
+const MAX_TEXT_CHARS = 16_000
 const ALLOWED_TYPES = new Set(['penuntun', 'sumber', 'lembar'])
 
 async function run(command: string, args: string[]) {
