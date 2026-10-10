@@ -1,76 +1,105 @@
-/** File-based job storage — persists across Next.js dev mode requests.
- *  Module-level Map doesn't work in Turbopack dev mode (resets per request). */
-import { writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, mkdirSync } from 'fs'
+/** File-based job storage for local/single-instance deployments.
+ * For serverless or multi-instance hosting, replace this with a shared database/queue. */
+import {
+  writeFileSync,
+  readFileSync,
+  unlinkSync,
+  existsSync,
+  readdirSync,
+  mkdirSync,
+  renameSync,
+} from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
+import { randomUUID } from 'crypto'
 
 const JOBS_DIR = join(tmpdir(), 'practicum-jobs')
+const JOB_ID_PATTERN = /^job-\d+-[a-z0-9]{6}$/
 
-// Ensure directory exists
-try {
-  if (!existsSync(JOBS_DIR)) {
-    mkdirSync(JOBS_DIR, { recursive: true })
-  }
-} catch {}
+function ensureDirectory() {
+  mkdirSync(JOBS_DIR, { recursive: true })
+}
 
 function jobPath(id: string): string {
+  if (!JOB_ID_PATTERN.test(id)) throw new Error('Invalid job ID')
   return join(JOBS_DIR, `${id}.json`)
+}
+
+function writeJob(id: string, value: unknown) {
+  ensureDirectory()
+  const target = jobPath(id)
+  const temporary = join(JOBS_DIR, `${id}.${randomUUID()}.tmp`)
+  try {
+    writeFileSync(temporary, JSON.stringify(value), { flag: 'wx', mode: 0o600 })
+    renameSync(temporary, target)
+  } finally {
+    try { unlinkSync(temporary) } catch {}
+  }
 }
 
 export function createJob(): string {
   const id = `job-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
-  const job = { status: 'processing', startedAt: Date.now() }
-  try {
-    writeFileSync(jobPath(id), JSON.stringify(job))
-  } catch (e) {
-    console.error('Failed to create job file:', e)
-  }
+  writeJob(id, { status: 'processing', startedAt: Date.now() })
   return id
 }
 
 export function getJob(id: string): { status: string; report?: any; error?: string; startedAt: number } | undefined {
+  if (!JOB_ID_PATTERN.test(id)) return undefined
   try {
-    if (!existsSync(jobPath(id))) return undefined
-    const data = readFileSync(jobPath(id), 'utf-8')
-    return JSON.parse(data)
+    const filepath = jobPath(id)
+    if (!existsSync(filepath)) return undefined
+    const data = JSON.parse(readFileSync(filepath, 'utf-8'))
+    if (!data || typeof data.startedAt !== 'number' || typeof data.status !== 'string') return undefined
+    return data
   } catch {
     return undefined
   }
 }
 
-export function completeJob(id: string, report: any) {
+export function completeJob(id: string, report: unknown) {
   try {
-    const job = getJob(id) || { status: 'processing', startedAt: Date.now() }
-    writeFileSync(jobPath(id), JSON.stringify({ ...job, status: 'done', report }))
-  } catch (e) {
-    console.error('Failed to complete job:', e)
+    const job = getJob(id)
+    if (!job) return
+    writeJob(id, { ...job, status: 'done', report })
+  } catch (error) {
+    console.error('Failed to complete job:', error instanceof Error ? error.message : 'Unknown error')
   }
 }
 
 export function failJob(id: string, error: string) {
   try {
-    const job = getJob(id) || { status: 'processing', startedAt: Date.now() }
-    writeFileSync(jobPath(id), JSON.stringify({ ...job, status: 'error', error }))
-  } catch (e) {
-    console.error('Failed to fail job:', e)
+    const job = getJob(id)
+    if (!job) return
+    writeJob(id, { ...job, status: 'error', error })
+  } catch (reason) {
+    console.error('Failed to fail job:', reason instanceof Error ? reason.message : 'Unknown error')
   }
 }
 
 export function cleanupOldJobs() {
   try {
-    if (!existsSync(JOBS_DIR)) return
+    ensureDirectory()
     const now = Date.now()
-    const maxAge = 10 * 60 * 1000 // 10 minutes
-    const files = readdirSync(JOBS_DIR)
-    for (const file of files) {
-      if (!file.endsWith('.json')) continue
+    const maxAge = 30 * 60 * 1000
+    for (const file of readdirSync(JOBS_DIR)) {
+      const filepath = join(JOBS_DIR, file)
       try {
-        const filepath = join(JOBS_DIR, file)
+        if (file.endsWith('.tmp')) {
+          // Remove abandoned atomic-write temp files older than the same retention window.
+          const stat = readFileSync(filepath)
+          if (stat.length === 0) unlinkSync(filepath)
+          continue
+        }
+        if (!file.endsWith('.json')) continue
         const data = JSON.parse(readFileSync(filepath, 'utf-8'))
-        if (now - data.startedAt > maxAge) {
+        if (typeof data.startedAt !== 'number' || now - data.startedAt > maxAge) {
           unlinkSync(filepath)
         }
-      } catch {}
+      } catch {
+        try { unlinkSync(filepath) } catch {}
+      }
     }
-  } catch {}
+  } catch (error) {
+    console.error('Job cleanup failed:', error instanceof Error ? error.message : 'Unknown error')
+  }
 }
