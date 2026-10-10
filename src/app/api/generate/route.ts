@@ -97,7 +97,8 @@ function isValidReport(value: unknown): value is { title: string; sections: Arra
     return typeof section.id === 'string' &&
       typeof section.title === 'string' &&
       typeof section.content === 'string' &&
-      section.content.length <= 30_000
+      section.content.length <= 30_000 &&
+      (section.editable === undefined || typeof section.editable === 'boolean')
   })
 }
 
