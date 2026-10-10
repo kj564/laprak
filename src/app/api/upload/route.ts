@@ -18,6 +18,7 @@ async function run(command: string, args: string[]) {
     timeout: 30_000,
     maxBuffer: 10 * 1024 * 1024,
     windowsHide: true,
+    encoding: 'utf8',
   })
 }
 
@@ -26,6 +27,11 @@ export async function POST(request: NextRequest) {
   let pyScript = ''
 
   try {
+    const contentLength = Number(request.headers.get('content-length') || 0)
+    if (contentLength > MAX_FILE_SIZE + 1024 * 1024) {
+      return NextResponse.json({ error: 'Ukuran file maksimal 15 MB.' }, { status: 413 })
+    }
+
     const formData = await request.formData()
     const file = formData.get('file')
     const type = formData.get('type')
@@ -46,9 +52,10 @@ export async function POST(request: NextRequest) {
     }
 
     const lowerName = file.name.toLowerCase()
-    const isPdf = lowerName.endsWith('.pdf') || file.type === 'application/pdf'
+    const isPdf = lowerName.endsWith('.pdf') ||
+      (!lowerName.endsWith('.docx') && file.type === 'application/pdf')
     const isDocx = lowerName.endsWith('.docx') ||
-      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      (!lowerName.endsWith('.pdf') && file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
 
     if (!isPdf && !isDocx) {
       return NextResponse.json({ error: 'Format tidak didukung. Gunakan PDF atau DOCX.' }, { status: 415 })
