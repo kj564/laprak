@@ -186,8 +186,17 @@ export default function Home() {
         {/* Step 1: Upload */}
         <section className="mb-8">
           <div className="mb-4 flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">1</span>
+            {allExtracted ? (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white">
+                <CheckCircle2 className="h-4 w-4" />
+              </span>
+            ) : (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">1</span>
+            )}
             <h2 className="text-base font-semibold text-slate-900">Upload Dokumen</h2>
+            {files.length > 0 && (
+              <span className="text-xs text-slate-400">{files.length} file terupload</span>
+            )}
           </div>
           <UploadPanel files={files} onFilesUpdate={setFiles} />
         </section>
@@ -195,8 +204,15 @@ export default function Home() {
         {/* Step 2: Generate */}
         <section className="mb-8">
           <div className="mb-4 flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">2</span>
+            {report ? (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white">
+                <CheckCircle2 className="h-4 w-4" />
+              </span>
+            ) : (
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">2</span>
+            )}
             <h2 className="text-base font-semibold text-slate-900">Generate Laporan</h2>
+            {report && <span className="text-xs text-green-600">Laporan siap ✓</span>}
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -267,8 +283,11 @@ export default function Home() {
               className="mb-8"
             >
               <div className="mb-4 flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">3</span>
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white">
+                  <CheckCircle2 className="h-4 w-4" />
+                </span>
                 <h2 className="text-base font-semibold text-slate-900">Preview & Edit Laporan</h2>
+                <span className="text-xs text-slate-400">Siap di-download</span>
               </div>
               <ReportPreview
                 report={report}
