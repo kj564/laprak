@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { UploadPanel } from '@/components/practicum/upload-panel'
 import { ReportPreview } from '@/components/practicum/report-preview'
