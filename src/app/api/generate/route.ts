@@ -23,8 +23,8 @@ try {
   const guidelinesPath = join(process.cwd(), 'src/lib/ppki-guidelines.txt')
   const fullText = readFileSync(guidelinesPath, 'utf-8')
   const pages = fullText
-    .split('\\f')
-    .map(page => page.replace(/\\s+/g, ' ').trim())
+    .split('\f')
+    .map(page => page.replace(/\s+/g, ' ').trim())
     .filter(page => page.length > 150)
   const keywords = [
     /sistematika/i,
@@ -41,7 +41,7 @@ try {
     const page = pages.find(candidate => keyword.test(candidate) && !selected.includes(candidate))
     if (page) selected.push(page.slice(0, 700))
   }
-  ppkiGuidelines = selected.join('\\n\\n').slice(0, 6000)
+  ppkiGuidelines = selected.join('\n\n').slice(0, 6000)
 } catch {
   console.warn('PPKI guidelines not found')
 }
