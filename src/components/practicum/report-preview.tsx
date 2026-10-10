@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Download, RotateCcw, Edit3, Save, FileText, Copy, Check, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Download, RotateCcw, Edit3, Save, FileText, Copy, Check, Loader2, RefreshCw } from 'lucide-react'
 import type { GeneratedReport } from '@/app/page'
+
+const STORAGE_KEY = 'laprak-report'
 
 export function ReportPreview({
   report,
@@ -19,6 +21,24 @@ export function ReportPreview({
   const [editContent, setEditContent] = useState('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to report when it appears
+  useEffect(() => {
+    if (report && previewRef.current) {
+      previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [report])
+
+  // Auto-save to localStorage
+  useEffect(() => {
+    if (report) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(report))
+      } catch {}
+    }
+  }, [report])
 
   const startEdit = (id: string, content: string) => {
     setEditingId(id)
@@ -61,11 +81,29 @@ export function ReportPreview({
     }
   }
 
+  const handleRegenerateSection = async (sectionId: string) => {
+    setRegeneratingId(sectionId)
+    try {
+      const response = await fetch('/api/regenerate-section', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ report, sectionId }),
+      })
+      if (!response.ok) throw new Error('Regenerate gagal')
+      const data = await response.json()
+      onSectionEdit(sectionId, data.content)
+    } catch (err) {
+      console.error('Section regenerate error:', err)
+    } finally {
+      setRegeneratingId(null)
+    }
+  }
+
   const getWordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length
   const totalWords = report.sections.reduce((sum, s) => sum + getWordCount(s.content), 0)
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div ref={previewRef} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       {/* Actions bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-6 py-3">
         <div className="flex items-center gap-3">
@@ -73,6 +111,7 @@ export function ReportPreview({
           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-600">
             {totalWords} kata
           </span>
+          <span className="text-[10px] text-slate-400">💾 Tersimpan otomatis</span>
         </div>
         <div className="flex gap-2">
           <button
@@ -80,7 +119,7 @@ export function ReportPreview({
             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-200"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Generate Ulang
+            Generate Ulang Semua
           </button>
           <button
             onClick={onDownload}
@@ -112,21 +151,33 @@ export function ReportPreview({
                     <h4 className="text-base font-bold text-slate-900">{section.title}</h4>
                     <span className="text-[10px] text-slate-400">{wordCount} kata</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {/* Copy section */}
                     <button
                       onClick={() => copySection(section.id, section.title, section.content)}
-                      className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-emerald-600"
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-emerald-600"
                       title="Copy section"
                     >
                       {copiedId === section.id ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                      {copiedId === section.id ? 'Copied' : 'Copy'}
+                    </button>
+                    {/* Regenerate this section only */}
+                    <button
+                      onClick={() => handleRegenerateSection(section.id)}
+                      disabled={regeneratingId === section.id}
+                      className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-400 transition-colors hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-40"
+                      title="Regenerate section ini saja"
+                    >
+                      {regeneratingId === section.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-3.5 w-3.5" />
+                      )}
                     </button>
                     {/* Edit toggle */}
                     {editingId === section.id ? (
                       <button
                         onClick={saveEdit}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-700"
+                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-green-600 transition-colors hover:bg-green-50"
                       >
                         <Save className="h-3.5 w-3.5" />
                         Simpan
@@ -134,10 +185,9 @@ export function ReportPreview({
                     ) : (
                       <button
                         onClick={() => startEdit(section.id, section.content)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-indigo-600"
+                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-400 transition-colors hover:bg-slate-100 hover:text-indigo-600"
                       >
                         <Edit3 className="h-3.5 w-3.5" />
-                        Edit
                       </button>
                     )}
                   </div>
