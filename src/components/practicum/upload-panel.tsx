@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, type Dispatch, type SetStateAction } from 'react'
 import { Upload, X, Loader2, CheckCircle2, AlertCircle, Plus } from 'lucide-react'
 import type { UploadedFile } from '@/app/page'
 
@@ -48,7 +48,7 @@ export function UploadPanel({
   onFilesUpdate,
 }: {
   files: UploadedFile[]
-  onFilesUpdate: (files: UploadedFile[]) => void
+  onFilesUpdate: Dispatch<SetStateAction<UploadedFile[]>>
 }) {
   const [dragOver, setDragOver] = useState<string | null>(null)
 
@@ -65,7 +65,7 @@ export function UploadPanel({
       if (!isPdf) return
     }
 
-    const id = `${type}-${Date.now()}`
+    const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const newFile: UploadedFile = {
       id,
       name: file.name,
@@ -77,10 +77,10 @@ export function UploadPanel({
 
     if (config.multiple) {
       // Multiple: just append
-      onFilesUpdate([...files, newFile])
+      onFilesUpdate(prev => [...prev, newFile])
     } else {
       // Single: remove existing of same type, add new
-      onFilesUpdate([...files.filter(f => f.type !== type), newFile])
+      onFilesUpdate(prev => [...prev.filter(f => f.type !== type), newFile])
     }
 
     try {
@@ -132,7 +132,7 @@ export function UploadPanel({
   }, [handleFile])
 
   const handleRemove = (id: string) => {
-    onFilesUpdate(files.filter(f => f.id !== id))
+    onFilesUpdate(prev => prev.filter(f => f.id !== id))
   }
 
   return (
